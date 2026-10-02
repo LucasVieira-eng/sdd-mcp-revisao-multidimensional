@@ -7,10 +7,10 @@ def calcular_total(subtotal: float) -> float:
 
     Cláusulas da especificação:
     - REQ-01: Adiciona taxa de frete padrão de R$ 15,00 ao subtotal.
-    - REQ-02: Concede frete grátis (taxa = R$ 0,00) se subtotal >= R$ 200,00.
+    - REQ-02: Concede frete grátis (taxa = R$ 0,00) se subtotal >= R$ 250,00.
     """
-    # REQ-02: Frete grátis para subtotal >= 200,00
-    if subtotal >= 200.0:
+    # REQ-02: Frete grátis para subtotal >= 250,00
+    if subtotal >= 250.0:
         return subtotal
 
     # REQ-01: Taxa padrão de R$ 15,00
