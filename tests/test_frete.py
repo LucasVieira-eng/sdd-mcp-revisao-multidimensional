@@ -7,6 +7,7 @@ Especificação: specs/checkout_frete.md
 - REQ-03: Identificar o país de origem do usuário utilizando a norma ISO 3166-1 alpha-2.
 - REQ-04: Selecionar e aplicar a regra de negócio correspondente ao país identificado no arquivo country_rules.json.
 - REQ-05: Se não existir uma regra configurada para o país identificado, não aplicar nenhuma regra de negócio.
+- RB-06: Quando o país de origem tiver uma taxa específica, aplicar essa taxa sobre o valor total.
 """
 
 import pytest
@@ -239,3 +240,30 @@ class TestCheckoutFrete:
         Mantém o frete grátis (taxa = R$ 0,00) para subtotal >= 250,00 sem aplicar regras extras.
         """
         assert calcular_total(subtotal, pais_origem=pais_origem) == pytest.approx(esperado, abs=1e-2)
+
+    # -------------------------------------------------------------------------
+    # RB-06: Aplicar taxa específica do país sobre o valor total
+    # -------------------------------------------------------------------------
+
+    def test_rb_06_aplicar_taxa_especifica_do_pais_sobre_valor_total(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        RB-06 (Event-driven): WHEN o país de origem tiver uma taxa específica,
+        THEN THE SYSTEM SHALL aplicar essa taxa sobre o valor total.
+        """
+        # Regra simulada para país "US" com taxa de 10%
+        regra_com_taxa = {
+            "country_name": "Estados Unidos",
+            "enabled": True,
+            "rule_id": "RULE-US-TAX-10",
+            "parameters": {
+                "taxa": 0.10,
+            },
+        }
+
+        monkeypatch.setattr("src.frete.obter_regra_pais", lambda codigo: regra_com_taxa if codigo == "US" else None)
+
+        # Subtotal R$ 100,00 + frete R$ 15,00 = R$ 115,00; + 10% de taxa sobre total = R$ 126,50
+        assert calcular_total(100.00, pais_origem="US") == pytest.approx(126.50, abs=1e-2)
+
+        # Subtotal R$ 250,00 + frete grátis R$ 0,00 = R$ 250,00; + 10% de taxa sobre total = R$ 275,00
+        assert calcular_total(250.00, pais_origem="US") == pytest.approx(275.00, abs=1e-2)
