@@ -1,0 +1,41 @@
+{
+  "_comment": "Arquivo acadêmico de exemplo. Os valores e regras são fictícios e devem ser substituídos pelas regras reais do sistema.",
+  "schema_version": "1.0",
+  "country_code_standard": "ISO 3166-1 alpha-2",
+  "default_behavior": {
+    "when_country_is_unsupported": "reject",
+    "message": "Não há regra configurada para o país informado."
+  },
+  "countries": {
+    "BR": {
+      "country_name": "Brasil",
+      "enabled": true,
+      "rule_id": "RULE-BR-001",
+      "rule_type": "example",
+      "parameters": {
+        "example_limit": 100,
+        "example_mode": "standard"
+      }
+    },
+    "PT": {
+      "country_name": "Portugal",
+      "enabled": true,
+      "rule_id": "RULE-PT-001",
+      "rule_type": "example",
+      "parameters": {
+        "example_limit": 200,
+        "example_mode": "standard"
+      }
+    },
+    "US": {
+      "country_name": "Estados Unidos",
+      "enabled": true,
+      "rule_id": "RULE-US-001",
+      "rule_type": "example",
+      "parameters": {
+        "example_limit": 300,
+        "example_mode": "standard"
+      }
+    }
+  }
+}
