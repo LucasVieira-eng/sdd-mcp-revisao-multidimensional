@@ -24,6 +24,7 @@ class TestCheckoutFrete:
     @pytest.mark.parametrize(
         "subtotal, esperado",
         [
+        # 1. ARRANGE
             (0.00, 15.00),
             (50.00, 65.00),
             (100.00, 115.00),
@@ -43,7 +44,10 @@ class TestCheckoutFrete:
         REQ-01 (Ubiquitous): THE SYSTEM SHALL calcular o valor total
         adicionando a taxa de frete padrão de R$ 15,00 ao subtotal do carrinho.
         """
-        assert calcular_total(subtotal) == pytest.approx(esperado, abs=1e-2)
+        # 2. ACT
+        result = calcular_total(subtotal)
+        # 3. ASSERT
+        assert result == pytest.approx(esperado, abs=1e-2)
 
     # -------------------------------------------------------------------------
     # REQ-02: Conceder frete grátis para subtotal >= R$ 250,00
