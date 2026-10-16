@@ -103,3 +103,13 @@ def calcular_total(subtotal: float, pais_origem: str = "BR") -> float:
     total = aplicar_regra_negocio(total, regra_pais)
 
     return total
+
+def calcular_total_com_ServicoLogisticaAPI_e_ServicoNotficacao(dummy_user, stub_servico_logistica, mock_notificacao, pedido):
+    if dummy_user is None:
+        print("usuario nao identificado")
+    if stub_servico_logistica.get_taxa("BR"):
+        print("taxa BR")
+        mock_notificacao.enviar(pedido)
+        print("Enviado!")
+        return "sucesso"
+    return "falha"

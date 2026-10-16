@@ -11,7 +11,8 @@ Especificação: specs/checkout_frete.md
 """
 
 import pytest
-from src.frete import calcular_total
+from unittest.mock import Mock
+from src.frete import calcular_total, calcular_total_com_ServicoLogisticaAPI_e_ServicoNotficacao
 
 
 class TestCheckoutFrete:
@@ -271,3 +272,14 @@ class TestCheckoutFrete:
 
         # Subtotal R$ 250,00 + frete grátis R$ 0,00 = R$ 250,00; + 10% de taxa sobre total = R$ 275,00
         assert calcular_total(250.00, pais_origem="US") == pytest.approx(275.00, abs=1e-2)
+
+def test_calcultar_total_com_ServicoLogisticaAPI_e_ServicoNotficacao():
+    # 1. ARRANGE
+    dummy_user = Mock()
+    stub_servico_logistica = Mock()
+    mock_notificacao = Mock()
+    pedido = "1"
+    # 2. ACT
+    resultado = calcular_total_com_ServicoLogisticaAPI_e_ServicoNotficacao(dummy_user, stub_servico_logistica, mock_notificacao, pedido)
+    # 3. ASSERT
+    assert calcular_total_com_ServicoLogisticaAPI_e_ServicoNotficacao(dummy_user, stub_servico_logistica, mock_notificacao, pedido) == "sucesso"
