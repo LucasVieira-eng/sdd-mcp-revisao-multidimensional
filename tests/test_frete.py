@@ -8,6 +8,7 @@ Especificação: specs/checkout_frete.md
 - REQ-04: Selecionar e aplicar a regra de negócio correspondente ao país identificado no arquivo country_rules.json.
 - REQ-05: Se não existir uma regra configurada para o país identificado, não aplicar nenhuma regra de negócio.
 - RB-06: Quando o país de origem tiver uma taxa específica, aplicar essa taxa sobre o valor total.
+- RB-07: Adicionar taxa adicional de R$ 10,00 para regiões "Norte" e "Nordeste" sobre a taxa base de frete, exceto se subtotal > R$ 300,00 (frete grátis).
 """
 
 import pytest
@@ -272,6 +273,187 @@ class TestCheckoutFrete:
 
         # Subtotal R$ 250,00 + frete grátis R$ 0,00 = R$ 250,00; + 10% de taxa sobre total = R$ 275,00
         assert calcular_total(250.00, pais_origem="US") == pytest.approx(275.00, abs=1e-2)
+
+    # -------------------------------------------------------------------------
+    # RB-07: Taxa adicional de R$ 10,00 para regiões Norte e Nordeste
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.parametrize(
+        "regiao",
+        ["Norte", "Nordeste"],
+        ids=["regiao_norte", "regiao_nordeste"],
+    )
+    @pytest.mark.parametrize(
+        "subtotal, esperado",
+        [
+            (0.00, 25.00),
+            (50.00, 75.00),
+            (100.00, 125.00),
+            (200.00, 225.00),
+            (249.99, 274.99),
+            (250.00, 275.00),
+            (250.01, 275.01),
+            (280.00, 305.00),
+            (299.99, 324.99),
+            (300.00, 325.00),
+        ],
+        ids=[
+            "subtotal_zero_taxa_base_mais_adicional",
+            "subtotal_50_taxa_base_mais_adicional",
+            "subtotal_100_taxa_base_mais_adicional",
+            "subtotal_200_taxa_base_mais_adicional",
+            "subtotal_limite_inferior_249_99",
+            "subtotal_250_limite_sem_frete_gratis_norte_nordeste",
+            "subtotal_250_01_mantem_taxa_adicional",
+            "subtotal_280_mantem_taxa_adicional",
+            "subtotal_limite_inferior_300_299_99",
+            "subtotal_limite_exato_300_mantem_taxa_adicional",
+        ],
+    )
+    def test_rb_07_norte_nordeste_subtotal_ate_300_adiciona_taxa_10_sobre_frete_base(
+        self, regiao: str, subtotal: float, esperado: float
+    ) -> None:
+        """
+        RB-07 (Event-driven): IF a região de entrega for "Norte" ou "Nordeste",
+        deve ser adicionada uma taxa adicional de R$ 10,00 sobre a taxa base de frete,
+        exceto se o subtotal do carrinho for superior a R$300,00 (onde o frete permanece grátis).
+
+        Para subtotal <= 300,00, a taxa total de frete é R$ 25,00 (R$ 15,00 base + R$ 10,00 adicional).
+        """
+        # 1. ARRANGE
+        # Parâmetros fornecidos via parametrização (subtotal, regiao, esperado)
+
+        # 2. ACT
+        total = calcular_total(subtotal, regiao=regiao)
+
+        # 3. ASSERT
+        assert total == pytest.approx(esperado, abs=1e-2)
+
+    @pytest.mark.parametrize(
+        "regiao",
+        ["Norte", "Nordeste"],
+        ids=["regiao_norte", "regiao_nordeste"],
+    )
+    @pytest.mark.parametrize(
+        "subtotal, esperado",
+        [
+            (300.01, 300.01),
+            (350.00, 350.00),
+            (500.00, 500.00),
+        ],
+        ids=[
+            "subtotal_limite_superior_300_01_frete_gratis",
+            "subtotal_350_frete_gratis",
+            "subtotal_500_frete_gratis",
+        ],
+    )
+    def test_rb_07_norte_nordeste_subtotal_superior_a_300_concede_frete_gratis(
+        self, regiao: str, subtotal: float, esperado: float
+    ) -> None:
+        """
+        RB-07 (Event-driven): IF a região de entrega for "Norte" ou "Nordeste",
+        deve ser adicionada uma taxa adicional de R$ 10,00 sobre a taxa base de frete,
+        exceto se o subtotal do carrinho for superior a R$300,00 (onde o frete permanece grátis).
+
+        Para subtotal > 300,00, o frete permanece grátis (taxa = R$ 0,00).
+        """
+        # 1. ARRANGE & 2. ACT
+        total = calcular_total(subtotal, regiao=regiao)
+
+        # 3. ASSERT
+        assert total == pytest.approx(esperado, abs=1e-2)
+
+    @pytest.mark.parametrize(
+        "regiao",
+        ["Sudeste", "Sul", "Centro-Oeste", None],
+        ids=["regiao_sudeste", "regiao_sul", "regiao_centro_oeste", "regiao_nenhuma"],
+    )
+    @pytest.mark.parametrize(
+        "subtotal, esperado",
+        [
+            (100.00, 115.00),
+            (249.99, 264.99),
+            (250.00, 250.00),
+            (300.00, 300.00),
+            (350.00, 350.00),
+        ],
+        ids=[
+            "subtotal_100_taxa_padrao_15",
+            "subtotal_249_99_taxa_padrao_15",
+            "subtotal_250_frete_gratis_padrao",
+            "subtotal_300_frete_gratis_padrao",
+            "subtotal_350_frete_gratis_padrao",
+        ],
+    )
+    def test_rb_07_outras_regioes_nao_sofrem_adicional_de_frete(
+        self, regiao: str | None, subtotal: float, esperado: float
+    ) -> None:
+        """
+        RB-07 (Event-driven): IF a região de entrega for "Norte" ou "Nordeste"...
+        Demais regiões ou nenhuma região informada devem manter as regras padrão (REQ-01 e REQ-02).
+        """
+        # 1. ARRANGE & 2. ACT
+        total = calcular_total(subtotal, regiao=regiao)
+
+        # 3. ASSERT
+        assert total == pytest.approx(esperado, abs=1e-2)
+
+    @pytest.mark.parametrize(
+        "regiao_variacao",
+        [
+            "norte",
+            "nordeste",
+            "NORTE",
+            "NORDESTE",
+            " Norte ",
+            " Nordeste ",
+        ],
+        ids=[
+            "minusculo_norte",
+            "minusculo_nordeste",
+            "maiusculo_norte",
+            "maiusculo_nordeste",
+            "espacos_norte",
+            "espacos_nordeste",
+        ],
+    )
+    def test_rb_07_regiao_case_insensitive_e_espacos(self, regiao_variacao: str) -> None:
+        """
+        RB-07: A identificação da região deve ser tolerante a maiúsculas/minúsculas e espaços.
+        """
+        # 1. ARRANGE
+        subtotal = 100.00
+        esperado = 125.00
+
+        # 2. ACT
+        total = calcular_total(subtotal, regiao=regiao_variacao)
+
+        # 3. ASSERT
+        assert total == pytest.approx(esperado, abs=1e-2)
+
+    def test_rb_07_integracao_com_taxa_pais_rb_06(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Integração RB-07 com RB-06: A taxa específica do país incide sobre o total
+        já considerando o frete adicional da região Norte/Nordeste.
+        """
+        # 1. ARRANGE
+        regra_com_taxa = {
+            "country_name": "Estados Unidos",
+            "enabled": True,
+            "rule_id": "RULE-US-TAX-10",
+            "parameters": {
+                "taxa": 0.10,
+            },
+        }
+        monkeypatch.setattr("src.frete.obter_regra_pais", lambda codigo: regra_com_taxa if codigo == "US" else None)
+
+        # 2. ACT & 3. ASSERT
+        # Subtotal R$ 100,00 + frete Norte R$ 25,00 = R$ 125,00; + 10% de taxa sobre total = R$ 137,50
+        assert calcular_total(100.00, pais_origem="US", regiao="Norte") == pytest.approx(137.50, abs=1e-2)
+
+        # Subtotal R$ 350,00 + frete grátis R$ 0,00 = R$ 350,00; + 10% de taxa sobre total = R$ 385,00
+        assert calcular_total(350.00, pais_origem="US", regiao="Nordeste") == pytest.approx(385.00, abs=1e-2)
+
 
 def test_calcultar_total_com_ServicoLogisticaAPI_e_ServicoNotficacao():
     # 1. ARRANGE
