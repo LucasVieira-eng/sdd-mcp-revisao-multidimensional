@@ -10,3 +10,4 @@ carrinho.
 # Requisitos de Negócio
 
 *   **RB-06** (Event-driven): WHEN o país de origem tiver uma taxa específica, THEN THE SYSTEM SHALL aplicar essa taxa sobre o valor total
+*   **RB-07** (Event-driven): IF a região de entrega for "Norte" ou "Nordeste", deve ser adicionada uma taxa adicional de R\$ 10,00 sobre a taxa base de frete, exceto se o subtotal do carrinho for superior a R\$300,00 (onde o frete permanece grátis).
