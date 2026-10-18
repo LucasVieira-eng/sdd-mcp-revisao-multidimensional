@@ -74,7 +74,35 @@ def aplicar_regra_negocio(total: float, regra_pais: dict | None) -> float:
     return total
 
 
-def calcular_total(subtotal: float, pais_origem: str = "BR") -> float:
+def calcular_frete(subtotal: float, regiao: str | None = None) -> float:
+    """
+    Calcula a taxa de frete com base no subtotal e na região de entrega.
+
+    Cláusulas da especificação:
+    - REQ-01: Adiciona taxa de frete padrão de R$ 15,00 ao subtotal do carrinho.
+    - REQ-02: Concede frete grátis (taxa = R$ 0,00) se subtotal >= R$ 250,00.
+    - RB-07 (Event-driven): IF a região de entrega for "Norte" ou "Nordeste", deve ser
+      adicionada uma taxa adicional de R$ 10,00 sobre a taxa base de frete, exceto se
+      o subtotal do carrinho for superior a R$300,00 (onde o frete permanece grátis).
+    """
+    regiao_normalizada = regiao.strip().lower() if isinstance(regiao, str) else None
+    eh_norte_ou_nordeste = regiao_normalizada in ("norte", "nordeste")
+
+    if eh_norte_ou_nordeste:
+        if subtotal > 300.0:
+            return 0.0
+        return 15.0 + 10.0
+
+    if subtotal >= 250.0:
+        return 0.0
+    return 15.0
+
+
+def calcular_total(
+    subtotal: float,
+    pais_origem: str = "BR",
+    regiao: str | None = None,
+) -> float:
     """
     Calcula o valor total do carrinho incluindo o frete e regras de país.
 
@@ -85,16 +113,15 @@ def calcular_total(subtotal: float, pais_origem: str = "BR") -> float:
     - REQ-04: Seleciona e aplica a regra de negócio correspondente no arquivo country_rules.json.
     - REQ-05: Se não existir uma regra configurada para o país identificado, não aplica nenhuma regra.
     - RB-06: Aplica taxa específica do país sobre o valor total ao final das operações.
+    - RB-07: Adiciona taxa adicional de R$ 10,00 para regiões Norte e Nordeste sobre a taxa base,
+      exceto se subtotal > R$ 300,00 (frete grátis).
     """
     # REQ-03: Identificação do país de origem segundo a norma ISO 3166-1 alpha-2
     codigo_pais = identificar_pais_origem(pais_origem)
 
-    # REQ-02: Frete grátis para subtotal >= 250,00
-    if subtotal >= 250.0:
-        total = subtotal
-    else:
-        # REQ-01: Taxa padrão de R$ 15,00
-        total = subtotal + 15.0
+    # REQ-01, REQ-02 e RB-07: Cálculo da taxa de frete
+    frete = calcular_frete(subtotal, regiao=regiao)
+    total = subtotal + frete
 
     # REQ-04 e REQ-05: Seleção de regra de negócio do país em country_rules.json
     regra_pais = obter_regra_pais(codigo_pais)
@@ -103,6 +130,7 @@ def calcular_total(subtotal: float, pais_origem: str = "BR") -> float:
     total = aplicar_regra_negocio(total, regra_pais)
 
     return total
+
 
 def calcular_total_com_ServicoLogisticaAPI_e_ServicoNotficacao(dummy_user, stub_servico_logistica, mock_notificacao, pedido):
     if dummy_user is None:
